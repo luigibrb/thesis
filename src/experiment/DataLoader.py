@@ -96,14 +96,16 @@ class DataLoader:
         # Calculate how many 0s we need to make n_1 represent 10% of the total
         # Equation: n_1 / (n_1 + n_0_needed) = 0.10  => n_0_needed = 9 * n_1
         n_0_needed = int(n_1 * 9)
+
+        rng = np.random.default_rng(seed=42)
         
         if len(idx_0) < n_0_needed:
             # If we don't have enough 0s, we downsample the 1s instead
             n_1_adjusted = int(len(idx_0) / 9)
             selected_0 = idx_0
-            selected_1 = np.random.choice(idx_1, n_1_adjusted, replace=False)
+            selected_1 = rng.choice(idx_1, n_1_adjusted, replace=False)
         else:
-            selected_0 = np.random.choice(idx_0, n_0_needed, replace=False)
+            selected_0 = rng.choice(idx_0, n_0_needed, replace=False)
             selected_1 = idx_1
             
         combined_indices = np.concatenate([selected_0, selected_1])
