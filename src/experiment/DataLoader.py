@@ -17,7 +17,7 @@ class DataLoader:
 
     def load_bodmas_metadata(self):
 
-        metadata = pl.read_csv(self.bodmas_file_path / "bodmas_metadata.csv").with_row_index("idx").select(
+        metadata = pl.read_csv(self.bodmas_file_path / "bodmas_metadata.csv").select(
             [
                 pl.col("idx"),
                 pl.col("sha"),
@@ -26,7 +26,8 @@ class DataLoader:
                 # pl.col("family"),
                 pl.col("family").is_not_null().alias("is_malware")
             ]
-        )
+        ).sort("timestamp").with_row_index("idx")
+        
         return metadata
 
     def split_data(self, metadata, X, y, train_cutoff: date = date(2020, 3, 1)):
@@ -65,7 +66,7 @@ class DataLoader:
         X_val, y_val = X[val_indices], y[val_indices]
         X_cal, y_cal = X[cal_indices], y[cal_indices]
 
-        test_windows = test_pool_df.group_by_dynamic("timestamp", every="1w").agg(pl.col("idx"))
+        test_windows = test_pool_df.sort("timestamp").group_by_dynamic("timestamp", every="1w", start_by="datapoint").agg(pl.col("idx"))
 
         test_sets = []
         for row in test_windows.iter_rows(named=True):
