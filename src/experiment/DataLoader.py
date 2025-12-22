@@ -19,7 +19,6 @@ class DataLoader:
 
         metadata = pl.read_csv(self.bodmas_file_path / "bodmas_metadata.csv").select(
             [
-                pl.col("idx"),
                 pl.col("sha"),
                 pl.col("timestamp").str.split("+").list.get(0).str.to_datetime(format="%Y-%m-%d %H:%M:%S"),
                 pl.col("timestamp").str.split("+").list.get(0).str.to_datetime(format="%Y-%m-%d %H:%M:%S").dt.date().alias("date"),
