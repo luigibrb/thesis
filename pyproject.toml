@@ -20,6 +20,8 @@ experiment = [
     "numpy>=2.3.3",
     "polars>=1.36.1",
     "pyarrow>=22.0.0",
+    "pydantic>=2.12.5",
+    "pydantic-settings>=2.12.0",
     "scikit-learn>=1.8.0",
 ]
 graphs = [

@@ -3,15 +3,15 @@ from pathlib import Path
 
 import polars as pl
 import numpy as np
-from sklearn.model_selection import train_test_split
+
+from experiment.settings import settings
 
 class DataLoader:
 
     def __init__(self):
-        self.bodmas_file_path = Path("/home/luigi/Workspace/thesis/data/bodmas")
+        self.bodmas_file_path = settings.data_path
 
     def load_bodmas_data(self):
-
         with np.load(self.bodmas_file_path / "bodmas.npz") as data:
             return data["X"], data["y"]
 
@@ -22,7 +22,6 @@ class DataLoader:
                 pl.col("sha"),
                 pl.col("timestamp").str.split("+").list.get(0).str.to_datetime(format="%Y-%m-%d %H:%M:%S"),
                 pl.col("timestamp").str.split("+").list.get(0).str.to_datetime(format="%Y-%m-%d %H:%M:%S").dt.date().alias("date"),
-                # pl.col("family"),
                 pl.col("family").is_not_null().alias("is_malware")
             ]
         ).sort("timestamp").with_row_index("idx")
@@ -37,35 +36,22 @@ class DataLoader:
         y_train_pool = y[train_pool_indices]
         
         # Get indices for a 90/10 ratio of 0s and 1s
-        stratified_sub_indices = self.get_stratified_indices(y_train_pool, target_ratio=0.1)
+        stratified_train_indices = self.get_stratified_indices(y_train_pool, target_ratio=0.1)
 
-        # These are the indices from the original X and y arrays that will be used for training/val/cal
-        resampled_pool_indices = train_pool_indices[stratified_sub_indices]
-        y_resampled_pool = y[resampled_pool_indices]
+        # We map the relative indices to the original global indices
+        final_train_indices = train_pool_indices[stratified_train_indices]
 
-        # Splitting indices to get 70% train and 30% temporary for validation and calibration
-        train_indices, temp_indices = train_test_split(
-            resampled_pool_indices,
-            test_size=0.30,
-            stratify=y_resampled_pool,
-            random_state=42
-        )
-        
-        y_temp = y[temp_indices]
+        # We create the final training tensors.
+        X_train = X[final_train_indices]
+        y_train = y[final_train_indices]
 
-        # Splitting temporary indices to get 15% validation and 15% calibration (50% of 30%)
-        val_indices, cal_indices = train_test_split(
-            temp_indices,
-            test_size=0.50,
-            stratify=y_temp,
-            random_state=42
-        )
-
-        X_train, y_train = X[train_indices], y[train_indices]
-        X_val, y_val = X[val_indices], y[val_indices]
-        X_cal, y_cal = X[cal_indices], y[cal_indices]
-
-        test_windows = test_pool_df.sort("timestamp").group_by_dynamic("timestamp", every="1w", start_by="datapoint").agg(pl.col("idx"))
+        # 3. Prepare Test Sets (Month-by-Month)
+        # The drift is evaluated "on a month-by-month basis".
+        test_windows = test_pool_df.sort("timestamp").group_by_dynamic(
+            "timestamp", 
+            every="2w",
+            start_by="datapoint"
+        ).agg(pl.col("idx"))
 
         test_sets = []
         for row in test_windows.iter_rows(named=True):
@@ -74,18 +60,22 @@ class DataLoader:
             
             if len(indices_in_window) == 0:
                 continue
-                
-            strat_sub_idx = self.get_stratified_indices(y[indices_in_window], target_ratio=0.10)
+            
+            # We apply stratification also in the test if you want to maintain consistency,
+            # although to evaluate the "natural concept drift" it would be better to use the natural distribution.
+            # Here I keep your original logic:
+            y_window_raw = y[indices_in_window]
+            strat_sub_idx = self.get_stratified_indices(y_window_raw, target_ratio=0.10)
             final_test_idx = indices_in_window[strat_sub_idx]
             
-            test_sets.append({
-                "week_start": window_start,
-                "X_test": X[final_test_idx],
-                "y_test": y[final_test_idx]
-            })
+            if len(final_test_idx) > 0:
+                test_sets.append({
+                    "period_start": window_start,
+                    "X_test": X[final_test_idx],
+                    "y_test": y[final_test_idx]
+                })
 
-        return X_train, y_train, X_val, y_val, X_cal, y_cal, test_sets
-
+        return X_train, y_train, test_sets
 
     @staticmethod
     def get_stratified_indices(target_array, target_ratio):
@@ -93,15 +83,21 @@ class DataLoader:
         idx_1 = np.where(target_array == 1)[0]
         
         n_1 = len(idx_1)
-        # Calculate how many 0s we need to make n_1 represent 10% of the total
-        # Equation: n_1 / (n_1 + n_0_needed) = 0.10  => n_0_needed = 9 * n_1
-        n_0_needed = int(n_1 * 9)
+        
+        if n_1 == 0:
+            return np.array([], dtype=int)
+
+        # Equation: n_1 / (n_1 + n_0_needed) = ratio
+        # Se ratio 0.1: n_1 / Total = 0.1 -> n_1 = 0.1 * Total -> Total = 10 * n_1
+        # n_0 = Total - n_1 = 9 * n_1
+        n_0_needed = int(n_1 * (1 - target_ratio) / target_ratio)
 
         rng = np.random.default_rng(seed=42)
         
         if len(idx_0) < n_0_needed:
-            # If we don't have enough 0s, we downsample the 1s instead
-            n_1_adjusted = int(len(idx_0) / 9)
+            # If we don't have enough benign samples, we reduce the malware
+            # n_1_new = n_0_actual * ratio / (1-ratio)
+            n_1_adjusted = int(len(idx_0) * target_ratio / (1 - target_ratio))
             selected_0 = idx_0
             selected_1 = rng.choice(idx_1, n_1_adjusted, replace=False)
         else:

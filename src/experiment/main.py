@@ -1,12 +1,25 @@
-from experiment.DataLoader import DataLoader
+from experiment.modules.DataLoader import DataLoader
+from experiment.modules.CrossConformalTrainer import CrossConformalTrainer
+from experiment.modules.ExperimentRunner import ExperimentRunner
+from experiment.settings import settings
+import uuid
 
+# 1. Setup
+loader = DataLoader()
+X, y = loader.load_bodmas_data()
+meta = loader.load_bodmas_metadata()
+X_train, y_train, test_sets = loader.split_data(meta, X, y)
 
-data_loader = DataLoader()
-metadata_df = data_loader.load_bodmas_metadata()
-X, y = data_loader.load_bodmas_data()
+del X, y, meta
 
-X_train, y_train, X_val, y_val, X_cal, y_cal, test_sets = data_loader.split_data(metadata_df, X, y)
+# 2. Train
+trainer = CrossConformalTrainer(k=5, model_type='rf')
+print("Training & Calibrating CCE...")
+trainer.fit_calibrate(X_train, y_train, calibration_settings={'n_iter': 5000, 'max_rej': 0.10})
 
-print("X_train shape:", X_train.shape)
-print("y_train shape:", y_train.shape)
-print(f"Number of weekly test windows: {len(test_sets)}")
+# 3. Run Experiment
+run_id = str(uuid.uuid4())
+print(f"Starting Run ID: {run_id}")
+
+runner = ExperimentRunner(output_dir=settings.results_path / "runs")
+df_results = runner.run(trainer, test_sets, run_id=run_id)
