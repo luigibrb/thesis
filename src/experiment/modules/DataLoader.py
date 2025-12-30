@@ -45,11 +45,10 @@ class DataLoader:
         X_train = X[final_train_indices]
         y_train = y[final_train_indices]
 
-        # 3. Prepare Test Sets (Month-by-Month)
-        # The drift is evaluated "on a month-by-month basis".
+        # 3. Prepare Test Sets (Week-by-Week)
         test_windows = test_pool_df.sort("timestamp").group_by_dynamic(
             "timestamp", 
-            every="2w",
+            every="1w",
             start_by="datapoint"
         ).agg(pl.col("idx"))
 
