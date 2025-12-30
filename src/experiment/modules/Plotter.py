@@ -24,8 +24,8 @@ class Plotter:
         color_bar = 'lightgray'
 
         # 1. Rejection Rate Bars (Background)
-        # Approximate width of 10 days for visibility
-        ax1.bar(df['period'].to_list(), df['rejection_rate'], color=color_bar, width=10, label='Rejection Rate', alpha=0.6)
+        # Approximate width of 5 days for visibility
+        ax1.bar(df['period'].to_list(), df['rejection_rate'], color=color_bar, width=5, label='Rejection Rate', alpha=0.6)
 
         # 2. Scatter plot for drift rates (Malware vs Goodware)
         ax1.scatter(df['period'].to_list(), df['drift_rate_malware'], marker='x', color='tab:red', label='Rate of drifting malware', zorder=5)
@@ -49,8 +49,8 @@ class Plotter:
 
         # Legend
         handles, labels = ax1.get_legend_handles_labels()
-        # Legend positioning bottom left
-        ax1.legend(handles, labels, loc='lower left', ncol=2, framealpha=0.9)
+        # Legend positioning center left to avoid overlapping with bars (bottom) or F1 lines (top)
+        ax1.legend(handles, labels, loc='center left', ncol=1, framealpha=0.9)
 
         plt.tight_layout()
         plt.grid(True, linestyle=':', alpha=0.6)
