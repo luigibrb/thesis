@@ -3,7 +3,7 @@ import polars as pl
 import numpy as np
 from datetime import date, datetime
 
-from experiment.DataLoader import DataLoader
+from experiment.modules.DataLoader import DataLoader
 
 @pytest.fixture
 def mock_data():
@@ -35,35 +35,30 @@ def test_split_data(mock_data):
     loader = DataLoader()
     train_cutoff = date(2020, 3, 1)
 
-    X_train, y_train, X_val, y_val, X_cal, y_cal, test_sets = loader.split_data(
+    X_train, y_train, test_sets = loader.split_data(
         mock_metadata, mock_X, mock_y, train_cutoff=train_cutoff
     )
 
     # Check shapes
     assert X_train.shape[0] == y_train.shape[0]
-    assert X_val.shape[0] == y_val.shape[0]
-    assert X_cal.shape[0] == y_cal.shape[0]
 
     # Check split sizes
-    assert len(y_train) == 70
-    assert len(y_val) == 15
-    assert len(y_cal) == 15
-
-    # Check stratification
-    assert y_train.mean() == pytest.approx(0.1, abs=0.05)
-    assert y_val.sum() in [1, 2]
-    assert y_cal.sum() in [1, 2]
+    # Train pool has 100 samples (d1, d2). 10 malware.
+    # Stratification 0.1 ratio -> 10 malware needs 90 benign. We have 90.
+    # Takes all 100.
+    assert len(y_train) == 100
+    assert y_train.mean() == pytest.approx(0.1, abs=0.01)
 
     # Check test sets
     assert len(test_sets) == 2
     
     # Test week 1
-    assert test_sets[0]["week_start"] == datetime(2020, 3, 1)
+    assert test_sets[0]["period_start"] == datetime(2020, 3, 1)
     assert len(test_sets[0]["y_test"]) == 50
     assert test_sets[0]["y_test"].mean() == pytest.approx(0.1, abs=0.01)
 
     # Test week 2
-    assert test_sets[1]["week_start"] == datetime(2020, 3, 8)
+    assert test_sets[1]["period_start"] == datetime(2020, 3, 8)
     assert len(test_sets[1]["y_test"]) == 50
     assert test_sets[1]["y_test"].mean() == pytest.approx(0.1, abs=0.01)
 
