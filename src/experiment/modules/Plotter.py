@@ -37,7 +37,7 @@ class Plotter:
         ax1.plot(df['period'].to_list(), df['f1_rejected'], marker='v', markersize=5, color=color_rejected, label='F1 Rejected (Quarantined)', linewidth=2)
 
         # Formatting
-        ax1.set_xlabel('Testing Period (Month)')
+        ax1.set_xlabel('Testing Period (Week)')
         ax1.set_ylabel('Score / Rate')
         ax1.set_ylim(0, 1.05)
         ax1.set_title('TRANSCENDENT Performance Analysis: CCE with Credibility', fontsize=16)
