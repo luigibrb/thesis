@@ -62,14 +62,16 @@ class Plotter:
             ax.set_ylim(0, 1.05)
             ax.grid(True, linestyle=':', alpha=0.6)
             
-            # Add legend only to the first subplot to avoid clutter, or minimal legend on others
+            # Title only on the top subplot
             if i == 0:
                 ax.set_title('TRANSCENDENT Performance Analysis: CCE with Credibility', fontsize=16)
-                # Combine handles for a unified legend
-                handles, labels = ax.get_legend_handles_labels()
-                ax.legend(handles, labels, loc='center left', bbox_to_anchor=(1, 0.5), ncol=1, framealpha=0.9)
 
-        # X-axis Formatting (Shared)
+            # --- Legend on ALL subplots ---
+            # Placing the legend outside to the right to prevent obscuring data
+            handles, labels = ax.get_legend_handles_labels()
+            ax.legend(handles, labels, loc='center left', bbox_to_anchor=(1, 0.5), ncol=1, framealpha=0.9)
+
+        # X-axis Formatting (Shared, applied to the last subplot)
         axes[-1].set_xlabel('Testing Period (Week)')
         axes[-1].xaxis.set_major_formatter(mdates.DateFormatter('%Y-%m'))
         axes[-1].xaxis.set_major_locator(mdates.AutoDateLocator())
