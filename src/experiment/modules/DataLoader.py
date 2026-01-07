@@ -27,7 +27,7 @@ class DataLoader:
         
         return metadata
 
-    def split_data(self, metadata, X, y, train_cutoff: date = date(2020, 3, 1)):
+    def split_data(self, metadata, X, y, train_cutoff: date = date(2020, 3, 1), granularity: str = "1d"):
         train_pool_df = metadata.filter(pl.col("timestamp") < train_cutoff)
         test_pool_df = metadata.filter(pl.col("timestamp") >= train_cutoff)
 
@@ -47,7 +47,7 @@ class DataLoader:
         # 3. Prepare Test Sets (Week-by-Week)
         test_windows = test_pool_df.sort("timestamp").group_by_dynamic(
             "timestamp", 
-            every="1w",
+            every=granularity,
             start_by="datapoint"
         ).agg(pl.col("idx"))
 

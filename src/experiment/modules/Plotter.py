@@ -1,16 +1,15 @@
 import polars as pl
 import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
-import io
 from experiment.settings import settings
 
 class Plotter:
 
     @classmethod
-    def plot_cce_results(self, csv_data):
+    def plot_cce_results(self, df):
         # Data loading
-        df = pl.read_csv(io.StringIO(csv_data))
-        df = df.with_columns(pl.col('period').str.to_datetime())
+        if df.schema['period'] == pl.String:
+            df = df.with_columns(pl.col('period').str.to_datetime())
         
         dates = df['period'].to_list()
 
@@ -20,7 +19,7 @@ class Plotter:
 
         # Metrics to plot
         metrics = [
-            ("f1", "F1-Score"),
+            ("f1", "F1 Score"),
             ("prec", "Precision"),
             ("rec", "Recall")
         ]
@@ -82,6 +81,54 @@ class Plotter:
         plt.tight_layout()
         plt.show()
 
+    @classmethod
+    def plot_rejection_rate(cls, df, W=4, retrain_threshold=None):
+        # Data loading
+        if df.schema['period'] == pl.String:
+            df = df.with_columns(pl.col('period').str.to_datetime())
+            
+        # Determine retrain_threshold if not provided
+        if retrain_threshold is None:
+            if "retrain_threshold" in df.columns:
+                # Assume constant threshold for the run, take the first non-null value
+                retrain_threshold = df['retrain_threshold'][0]
+            else:
+                print("Warning: 'retrain_threshold' not found in DataFrame and not provided. Defaulting to 0.10")
+                retrain_threshold = 0.10
+
+        # Calculate moving average of rejection rate
+        df = df.with_columns(
+            pl.col('rejection_rate').rolling_mean(window_size=W).alias('rejection_rate_ma')
+        )
+        
+        dates = df['period'].to_list()
+        
+        plt.style.use('default')
+        fig, ax = plt.subplots(figsize=(14, 6))
+        
+        color_bar = 'lightgray'
+        
+        # Bars
+        ax.bar(dates, df['rejection_rate'], color=color_bar, width=5, label='Rejection Rate', alpha=0.6)
+        
+        # Moving Average
+        ax.plot(dates, df['rejection_rate_ma'], color='tab:purple', linestyle='-', linewidth=2, label=f'Rejection Rate MA (W={W})')
+        
+        # Threshold Line
+        ax.axhline(y=retrain_threshold, color='red', linestyle='--', linewidth=2, label=f'Threshold ({round(retrain_threshold, 4)})')
+        
+        ax.set_xlabel('Testing Period (Week)')
+        ax.set_ylabel('Rejection Rate')
+        ax.set_title(f'Rejection Rate Analysis (MA Window = {W})')
+        
+        ax.xaxis.set_major_formatter(mdates.DateFormatter('%Y-%m'))
+        ax.xaxis.set_major_locator(mdates.AutoDateLocator())
+        plt.setp(ax.xaxis.get_majorticklabels(), rotation=45)
+        
+        ax.legend()
+        plt.tight_layout()
+        plt.show()
+
 if __name__ == "__main__":
     plotter = Plotter()
     # Example file path using settings
@@ -89,8 +136,8 @@ if __name__ == "__main__":
     
     # Check if file exists before reading
     if file_path.exists():
-        with open(file_path, "r") as file:
-            csv_data = file.read()
-            plotter.plot_cce_results(csv_data)
+        df = pl.read_csv(file_path)
+        plotter.plot_cce_results(df)
+        plotter.plot_rejection_rate(df)
     else:
         print(f"File not found: {file_path}")

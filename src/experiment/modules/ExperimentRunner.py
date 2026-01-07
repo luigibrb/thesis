@@ -3,7 +3,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
 import io
-from sklearn.metrics import f1_score, precision_score, recall_score, accuracy_score
+from sklearn.metrics import f1_score, precision_score, recall_score, accuracy_score, fbeta_score
 from pathlib import Path
 from experiment.settings import settings
 
@@ -43,6 +43,9 @@ class ExperimentRunner:
     def run(self, trainer, test_sets, run_id=None):
         print(f"Starting evaluation on {len(test_sets)} periods...")
         
+        # Get retrain threshold if available
+        retrain_thresh = getattr(trainer, 'retrain_threshold', None)
+        
         for i, batch in enumerate(test_sets):
             period_date = batch['period_start']
             X_test = batch['X_test']
@@ -62,7 +65,8 @@ class ExperimentRunner:
                 "run_id": run_id,
                 "period": period_date,
                 "n_samples": len(y_test),
-                "rejection_rate": np.mean(is_rejected)
+                "rejection_rate": np.mean(is_rejected),
+                "retrain_threshold": retrain_thresh
             }
             
             # A. Baseline (No Rejection)
