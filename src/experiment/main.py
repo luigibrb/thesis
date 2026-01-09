@@ -9,7 +9,7 @@ import uuid
 loader = DataLoader()
 X, y = loader.load_bodmas_data()
 meta = loader.load_bodmas_metadata()
-X_train, y_train, test_sets = loader.split_data(meta, X, y, granularity="1d")
+X_train, y_train, test_sets = loader.split_data(meta, X, y, granularity="1d") # or 1w
 
 del X, y, meta
 
@@ -35,5 +35,5 @@ print(f"Starting Run ID: {run_id}")
 runner = ExperimentRunner(output_dir=settings.results_path / "runs")
 df_results = runner.run(trainer, test_sets, run_id=run_id)
 
-Plotter.plot_cce_results(df_results)
-Plotter.plot_rejection_rate(df_results, W=5)
+Plotter.plot_cce_results(df_results, ma_window=5)
+Plotter.plot_rejection_rate(df_results, W=4, retrain_tolerance_constant=0.02)
