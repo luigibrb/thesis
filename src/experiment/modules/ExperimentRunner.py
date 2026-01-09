@@ -1,9 +1,6 @@
 import polars as pl
 import numpy as np
-import matplotlib.pyplot as plt
-import matplotlib.dates as mdates
-import io
-from sklearn.metrics import f1_score, precision_score, recall_score, accuracy_score, fbeta_score
+from sklearn.metrics import f1_score, precision_score, recall_score
 from pathlib import Path
 from experiment.settings import settings
 
