@@ -1,7 +1,7 @@
 import lightgbm as lgb
 from sklearn.model_selection import StratifiedKFold
-from sklearn.metrics import f1_score, fbeta_score
-from sklearn.svm import LinearSVC, SVC
+from sklearn.metrics import f1_score
+from sklearn.svm import LinearSVC
 from sklearn.calibration import CalibratedClassifierCV
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.linear_model import SGDClassifier
@@ -34,7 +34,7 @@ class CrossConformalTrainer:
         self.fold_data = []
         
         if calibration_settings is None:
-            calibration_settings = {'n_iter': 5000, 'f1_min': 0.85, 'target_metric': 'min_rejection_rate', 'rejection_rate_max': 0.10}
+            calibration_settings = {'n_iter': 5000, 'f1_min': 0.85, 'target_metric': 'min_rejection_rate'}
         
         f1_min = calibration_settings.get('f1_min', 0.85)
         n_iter = calibration_settings.get('n_iter', 5000)
